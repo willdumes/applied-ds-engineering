@@ -2,10 +2,9 @@
 
 ## Goals
 
-- **A) Bridge the DS-to-MLE gap** -- understand model lifecycle tooling from build to deploy
-- **B) Practice Python** -- scikit-learn, pandas, matplotlib, MLflow APIs
-- **C) Build a real ML project end-to-end** -- train, track, register, and serve a model
-- **D) Professional development** -- deepen hands-on ML engineering skills alongside DS management experience
+- **A) Practice Python** -- scikit-learn, pandas, matplotlib, MLflow APIs
+- **B) Build a real ML project end-to-end** -- train, track, register, and serve a model
+
 
 ---
 
@@ -13,12 +12,12 @@
 
 ### Phase 1: Explore & set up
 
-- [x] Fork MLflow repo, create hacking scratchpad
+- [x] Fork MLflow repo, create dev scratchpad
 - [x] Explore repo structure and Docker Compose stack
 - [x] Stand up the Docker stack (Postgres + RustFS + MLflow server on port 5433/9000/5000)
 - [x] Run the wine quality example (3 runs with different hyperparams, visible in UI)
 - [x] Parse Strava FIT data with fitparse + pandas (10,336 rows from Napa marathon)
-- [x] Walk through train.py line by line -- understand the full tracking flow
+- [x] Walk through train.py and deep dive into ElasticNet Lasso/Ridge regularization
 - [ ] Walk through the MLflow quickstart guides
 
 ### Phase 2: Build a model with Strava data
@@ -219,12 +218,3 @@ It's the most concrete, has a clear target variable, uses regression (familiar),
 **Flask = Python web framework.** Turns Python functions into HTTP endpoints. MLflow's tracking server is a Flask app serving both the REST API and the React UI (as static files). "Static" means the JS files don't change at request time -- all interactivity runs in the browser.
 
 **Postgres for metadata, S3 for blobs.** Same architectural split used by GitHub, Spotify, etc. Structured data (params, metrics) in SQL, large files (models, plots) in object storage.
-
----
-
-## Part 5: Up Next
-
-- Walk through train.py line by line (ElasticNet, train/test split, MLflow logging)
-- Start Strava EDA: parse all activities, clean NaNs, engineer features
-- Build first regression model: predict race time from training block features
-- Track experiments in MLflow and compare runs in the UI

@@ -80,16 +80,7 @@ packages/stats/
 
 ## Part 2: Statistical Methods
 
-### Frequentist
-- **Welch's t-test** (two-sided and one-sided) — unequal variance, Welch-Satterthwaite degrees of freedom
-- **Sequential testing** — SPRT-style with alpha spending, e-value framework for p-value inversion
-- **Bonferroni correction** — for multiple metrics × variations
-
-### Bayesian
-- **Gaussian posterior A/B test** — chance-to-win, credible intervals, risk metrics
-- **Thompson sampling bandits** — multi-arm weight reallocation (simple, ratio, and CUPED variants)
-
-### Bayesian A/B test details (`bayesian_stats.py`) — Done
+### Bayesian A/B test details (`bayesian_stats.py`)
 
 Built from scratch with scipy. Reproduces GrowthBook's +10.8% lift from first principles.
 
@@ -102,7 +93,7 @@ Built from scratch with scipy. Reproduces GrowthBook's +10.8% lift from first pr
 - **Risk metrics**: Expected loss via truncated normal means
 - **Matplotlib**: Posterior distribution plot with 95% CI shaded
 
-### Frequentist A/B test details (`frequentist_stats.py`) — Done
+### Frequentist A/B test details (`frequentist_stats.py`)
 
 Built from scratch with scipy. Same data pipeline as Bayesian, different interpretation step.
 
@@ -112,15 +103,6 @@ Built from scratch with scipy. Same data pipeline as Bayesian, different interpr
 - **p-value**: `2 * (1 - t.cdf(abs(t_stat), df))` — two-sided, matches GrowthBook exactly
 - **95% CI**: `lift ± t.ppf(0.975, df) * SE`
 - **Matplotlib**: Null t-distribution with observed t-stat and p-value tails shaded
-
-### Bandit algorithms (Thompson Sampling)
-
-Uses Bayesian posterior sampling to reallocate traffic toward better-performing arms.
-
-- `BanditsSimple` — for mean metrics
-- `BanditsRatio` — for ratio metrics
-- `BanditsCuped` — with CUPED variance reduction
-- Config options: `min_variation_weight` floor (default 1%), `top_two` mode, `weight_by_period` tracking
 
 ### Variance reduction
 - **CUPED** — uses pre-experiment covariate to reduce variance (`RegressionAdjustedStatistic`)
@@ -227,7 +209,7 @@ cur.execute("INSERT INTO t (col1, col2) VALUES (%s, %s)", (val1, val2))
 ```
 psycopg2 escapes the values before they touch the SQL string. The query structure and the data never mix.
 
-### Pandas gotchas
+### Pandas  gotchas
 
 **`.sum()` vs `.agg()` — different APIs for column selection.** `.agg()` accepts column names as arguments (e.g., `.agg(total=('metric_0', 'sum'))`), but `.sum('metric_0')` does NOT select a column — the string argument is interpreted as the `axis` parameter, causing a boolean coercion error. Always select the column first with bracket notation: `df.groupby(...)['metric_0'].sum()`.
 
@@ -292,10 +274,6 @@ Understand how proportions, means, and ratios each flow through the stats engine
 ### Contribute to GrowthBook — fix an open issue
 
 Take another pass at `open_issues.md`, find a good-first-issue, and submit a PR. Goal: demonstrate ability to navigate a production codebase and contribute upstream.
-
-### Publish to GitHub
-
-Polish this project and publish to a public repo. Showcase: Kafka pipeline, Bayesian stats from scratch, matplotlib visualizations, and GrowthBook contribution.
 
 ### Bonus: MCMC Bayesian analysis (lower priority)
 

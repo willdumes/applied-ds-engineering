@@ -70,14 +70,28 @@ def welch_test(lift, var_lift, ctrl, trt):
 
 def plot_null_vs_observed(result):
     """Plot the null t-distribution with the observed t-stat and p-value shaded."""
-    # TODO: build the plot
-    # Hints:
     x = np.linspace(-5, 5, 300)
     y = t.pdf(x, df=result['df'])
-    #   Shade both tails beyond ±abs(t_stat) to show the p-value region
-    #   Mark the observed t_stat with a vertical line
-    fig, ax = plt.subplots(figsize = (10, 5))
-    ax.plot(x, y)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(x, y, color='steelblue', linewidth=2)
+
+    # Shade both tails beyond ±|t_stat| to show the p-value region
+    t_abs = abs(result['t_stat'])
+    left_tail = x <= -t_abs
+    right_tail = x >= t_abs
+    ax.fill_between(x[left_tail], y[left_tail], alpha=0.3, color='red', label=f'p-value = {result["p_value"]:.4f}')
+    ax.fill_between(x[right_tail], y[right_tail], alpha=0.3, color='red')
+
+    # Mark the observed t-stat
+    ax.axvline(result['t_stat'], color='steelblue', linestyle='--', linewidth=1,
+               label=f't-stat = {result["t_stat"]:.2f}')
+
+    ax.set_xlabel('t')
+    ax.set_ylabel('Density')
+    ax.set_title('Null t-Distribution vs Observed Test Statistic')
+    ax.legend()
+    plt.tight_layout()
     plt.show()
 
 

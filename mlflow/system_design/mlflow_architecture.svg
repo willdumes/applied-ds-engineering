@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 740 500" width="740" height="500" style="background:#ffffff;font-family:monospace">
+
+  <!-- Title -->
+  <text x="20" y="28" font-size="14" font-weight="bold" fill="#1a1a2e">Set up with Docker</text>
+
+  <!-- train.py box -->
+  <rect x="280" y="55" width="180" height="60" rx="4" fill="#ffffff" stroke="#1a1a2e" stroke-width="2"/>
+  <text x="370" y="80" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">train.py</text>
+  <text x="370" y="98" text-anchor="middle" font-size="11" fill="#444">(ML script)</text>
+
+  <!-- Features (X) arrow -->
+  <line x1="160" y1="85" x2="278" y2="85" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="155" y="75" text-anchor="end" font-size="11" fill="#333">Features</text>
+  <text x="155" y="90" text-anchor="end" font-size="11" fill="#333">(X)</text>
+
+  <!-- Labels (Y) arrow -->
+  <line x1="580" y1="85" x2="462" y2="85" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="585" y="80" font-size="11" fill="#333">Labels</text>
+  <text x="585" y="95" font-size="11" fill="#333">(Y)</text>
+
+  <!-- params arrow (train.py → MLflow) -->
+  <line x1="320" y1="115" x2="260" y2="215" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="238" y="160" text-anchor="middle" font-size="10" fill="#555">params</text>
+  <text x="238" y="173" text-anchor="middle" font-size="10" fill="#555">(α, λ)</text>
+
+  <!-- metrics arrow (train.py → MLflow) -->
+  <line x1="370" y1="115" x2="370" y2="215" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="375" y="160" font-size="10" fill="#555">metrics</text>
+  <text x="375" y="173" font-size="10" fill="#555">(RMSE, R²)</text>
+
+  <!-- artifacts arrow (train.py → MLflow) -->
+  <line x1="420" y1="115" x2="490" y2="215" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="460" y="160" font-size="10" fill="#555">artifacts</text>
+  <text x="452" y="173" font-size="10" fill="#555">(coefficients)</text>
+
+  <!-- MLflow Server box -->
+  <rect x="160" y="215" width="420" height="90" rx="4" fill="#eef2ff" stroke="#3730a3" stroke-width="2.5"/>
+  <text x="370" y="243" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e1b4b">MLflow Server</text>
+  <text x="370" y="263" text-anchor="middle" font-size="11" fill="#3730a3">Python (Flask / REST API)</text>
+  <text x="370" y="280" text-anchor="middle" font-size="11" fill="#3730a3">+ UI (React) : 5000</text>
+
+  <!-- MLflow → Postgres arrow -->
+  <line x1="290" y1="305" x2="245" y2="375" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- MLflow → S3 arrow -->
+  <line x1="450" y1="305" x2="490" y2="375" stroke="#1a1a2e" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Postgres box -->
+  <rect x="140" y="375" width="180" height="65" rx="4" fill="#f0fdf4" stroke="#166534" stroke-width="2"/>
+  <text x="230" y="402" text-anchor="middle" font-size="13" font-weight="bold" fill="#14532d">PostgreSQL db</text>
+  <text x="230" y="422" text-anchor="middle" font-size="12" fill="#166534">:5432</text>
+
+  <!-- S3 / RustFS box -->
+  <rect x="420" y="375" width="180" height="65" rx="4" fill="#fff7ed" stroke="#9a3412" stroke-width="2"/>
+  <text x="510" y="398" text-anchor="middle" font-size="13" font-weight="bold" fill="#7c2d12">S3 / RustFS</text>
+  <text x="510" y="416" text-anchor="middle" font-size="12" fill="#9a3412">:9000</text>
+
+  <!-- Postgres label -->
+  <text x="130" y="385" text-anchor="end" font-size="10" fill="#555">Structured metadata</text>
+  <text x="130" y="398" text-anchor="end" font-size="10" fill="#555">(params, metrics,</text>
+  <text x="130" y="411" text-anchor="end" font-size="10" fill="#555">run info)</text>
+
+  <!-- S3 label -->
+  <text x="615" y="385" font-size="10" fill="#555">Blobs</text>
+  <text x="615" y="398" font-size="10" fill="#555">(model files,</text>
+  <text x="615" y="411" font-size="10" fill="#555">plots, CSV)</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#1a1a2e"/>
+    </marker>
+  </defs>
+
+</svg>
