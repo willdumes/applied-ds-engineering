@@ -1,7 +1,7 @@
 from fitparse import FitFile
 import pandas as pd
 
-f = FitFile('strava_data/activities/18666588095.fit')
+f = FitFile('/Users/willd/Development/applied-ds-engineering/mlflow/strava_data/activities/18666588095.fit')
 
 def record_to_dict(record):
     return {field.name: field.value for field in record.fields}

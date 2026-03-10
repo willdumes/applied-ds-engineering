@@ -1,10 +1,6 @@
 # MLflow End-to-End Implementation
 
-A portfolio project demonstrating end-to-end ML experiment tracking and model management using MLflow, with hands-on implementations spanning classical ML, Strava data modeling, and GenAI evaluation pipelines.
-
-## Overview
-
-This repo covers the full ML lifecycle using MLflow as the central tracking and registry layer: from raw data and feature engineering through model training, evaluation, registration, and serving. It includes both classical ML and GenAI workloads to demonstrate breadth.
+A portfolio project demonstrating end-to-end ML experiment tracking and model management using MLflow, built around a real-world running pace prediction model using personal Strava data.
 
 ## Repository Structure
 
@@ -13,63 +9,51 @@ mlflow/
 ├── system_design/
 │   └── mlflow_architecture.svg      # System design: tracking server, artifact store, model registry
 ├── strava_scripts/
-│   ├── feature_engineering.py       # Strava activity data: pace, HR zones, elevation, TSS
-│   ├── train_classical_ml.py        # sklearn models logged to MLflow: Ridge, RF, XGBoost
-│   └── strava_schema.sql            # Data model for Strava activities
-├── genai_evals/
-│   ├── eval_pipeline.py             # LLM eval framework logged to MLflow
-│   ├── qwen_local_runner.py         # Qwen3.5 30B inference via local endpoint
-│   └── eval_metrics.py              # Custom metrics: relevance, faithfulness, toxicity
-├── requirements.txt
+│   ├── feature_engineering.py       # FIT file parsing, CSV merging, rolling/lagged feature engineering
+│   ├── train_classical_ml.py        # ElasticNet training with MLflow experiment tracking
+│   └── mini_script.py               # Exploratory FIT file parser
+├── docker-compose/
+│   ├── docker-compose.yml           # PostgreSQL + RustFS + MLflow server stack
+│   ├── .env.dev.example             # Example environment variables
+│   └── README.md                    # Docker setup guide
+├── learnings.md                     # Notes taken while building the implementation
 └── README.md
 ```
 
 ## System Design
 
- ![MLflow Architecture](system_design/mlflow_architecture.svg)
+![MLflow Architecture](system_design/mlflow_architecture.svg)
 
 - **Tracking server**: experiment, run, and metric storage; local vs. remote backend
-- **Artifact store**: model binaries, plots, confusion matrices, eval outputs
+- **Artifact store**: model binaries, plots, feature importance charts, eval outputs
 - **Model registry**: staging, production, and archived model versions with lineage
 - **Serving layer**: MLflow model server, REST API, batch vs. real-time inference patterns
 
-## Modules
+## Strava Pace Prediction (`strava_scripts/`)
 
-### 1. Strava Data Modeling (`strava_scripts/`)
+Per-second running pace prediction using personal Strava data, tracked as MLflow experiments.
 
-End-to-end ML pipeline using personal Strava activity data, tracked in MLflow.
+- **Data pipeline**: batch-parse Garmin FIT files (binary telemetry) and join with Strava CSV activity metadata via file ID bridge key
+- **Target**: instantaneous speed (m/s) at each second of a run
+- **Features**: elevation change (30s window), heart rate, elapsed time, % complete, shoe type (one-hot encoded), weather, `is_race` confounder control
+- **Models**: ElasticNet as interpretable baseline (R² ≈ 0.40), XGBoost planned for non-linear interactions (R² target: 0.80+)
+- **MLflow integration**: params, metrics (RMSE, R²), model artifact, and feature importance / residual plots logged per run
 
-- **Features**: average pace, HR zones, elevation gain, TSS (training stress score), rest days, rolling 4-week volume
-- **Target**: predicted race performance (e.g., 5K equivalent, marathon finish time)
-- **Models**: Ridge regression, Random Forest, XGBoost, with MLflow comparison across runs
-- **Logged artifacts**: feature importance plots, learning curves, residual analysis
+### Key findings
 
-### 2. GenAI Evals (`genai_evals/`)
-
-LLM evaluation pipeline using local Qwen3.5 30B, with results tracked in MLflow.
-
-- **Eval framework**: custom metrics logged as MLflow scalars per run
-- **Metrics**: relevance (embedding cosine similarity), faithfulness (NLI-based), response length, latency
-- **Local inference**: Qwen3.5 30B via local endpoint (OpenAI-compatible API)
-
-```python
-import mlflow
-
-with mlflow.start_run(run_name="qwen_eval_v1"):
-    mlflow.log_param("model", "qwen3.5-30b")
-    mlflow.log_param("prompt_version", "v3")
-    mlflow.log_metric("relevance_score", relevance)
-    mlflow.log_metric("faithfulness", faithfulness)
-    mlflow.log_metric("avg_latency_ms", latency)
-```
+- **Elevation change** is the strongest predictor of instantaneous pace
+- **Shoe type** has a measurable effect: carbon race shoes (METASPEED SKY) → faster, heavy trainers (GEL-NIMBUS 28) → slower
+- **Humidity** appeared as a strong predictor but is a **confounder** — it proxies for race-day conditions (early morning, cool, tapered, race shoes). Adding `is_race` as a feature controls for this omitted variable bias
+- **Calories and power** were identified as target leakage (both derived from speed) and removed
 
 ## Key Design Decisions
 
 | Decision | Rationale |
 |---|---|
 | Local MLflow tracking server | No infra cost, reproducible across machines |
-| Strava as training data | Real personal data, avoids leakage concerns, meaningful features |
-| Qwen3.5 30B local for evals | No API cost, privacy-safe, sufficient capability for eval tasks |
+| Strava as training data | Real personal data, meaningful features, avoids synthetic data |
+| Per-second granularity | Richer signal than activity-level aggregates, captures intra-run dynamics |
+| ElasticNet first, then XGBoost | Linear baseline surfaces interpretable insights (shoe effects, confounders); tree model captures non-linear interactions |
 
 ## Requirements
 
@@ -78,26 +62,24 @@ mlflow
 numpy
 pandas
 scikit-learn
-xgboost
 matplotlib
-openai          # for local Qwen OpenAI-compatible endpoint
-sentence-transformers  # for GenAI eval embedding metrics
+fitparse
 ```
 
 ## Running the Project
 
 ```bash
-# Start local MLflow tracking server
-mlflow server --host 127.0.0.1 --port 5000
+# Start the Docker stack (PostgreSQL + RustFS + MLflow server)
+cd docker-compose && docker compose up -d
 
-# Run Strava modeling pipeline
+# Train with default hyperparameters
 python strava_scripts/train_classical_ml.py
 
-# Run GenAI eval pipeline (requires local Qwen endpoint running)
-python genai_evals/eval_pipeline.py
+# Train with custom hyperparameters
+python strava_scripts/train_classical_ml.py --alpha 0.05 --l1-ratio 1.0 --limit 20
 
-# Open MLflow UI
-open http://127.0.0.1:5000
+# Open MLflow UI to compare runs
+open http://localhost:5000
 ```
 
 ## References
