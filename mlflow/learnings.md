@@ -10,31 +10,30 @@
 
 ## Plan
 
-### Phase 1: Explore & set up
+### Phase 1: Set up Docker and explore repo
 
 - [x] Fork MLflow repo, create dev scratchpad
 - [x] Explore repo structure and Docker Compose stack
 - [x] Stand up the Docker stack (Postgres + RustFS + MLflow server on port 5433/9000/5000)
+
+### Phase 2: ML models (train.py intro + Strava deep dive)
+
 - [x] Run the wine quality example (3 runs with different hyperparams, visible in UI)
 - [x] Walk through train.py and deep dive into ElasticNet Lasso/Ridge regularization
-- [ ] Walk through the MLflow quickstart guides
-
-### Phase 2: Build a model with Strava data
-
 - [x] Parse Strava FIT data with fitparse + pandas (10,336 rows from Napa marathon)
-- [ ] EDA in pandas + matplotlib
-- [x] Train a linear model model (e.g., predict pace from training features)
+- [x] EDA in pandas
+- [x] Train a linear model (e.g., predict pace from training features)
 - [x] Track experiments in MLflow (params, metrics, artifacts)
 - [ ] Train an advanced model to get high predictability (e.g. XGBoost)
 - [ ] Register best model in Model Registry
 - [ ] Serve model locally via `mlflow models serve`
 
-### Phase 3: GenAI side of MLflow (with local Qwen3.5 30B)
+### Phase 3: GenAI (Data Science AI Agent with Qwen 3.5)
 
 - [ ] Set up MLflow tracing with local Qwen3.5 via Ollama
 - [ ] Log and inspect LLM traces in the MLflow UI
 - [ ] Use MLflow Evaluate to score LLM outputs (relevance, toxicity, etc.)
-- [ ] Explore Prompts and AI Gateway features
+- [ ] (bonus) Build a Data Science AI agent
 
 ### Phase 4: Go deeper
 
@@ -43,7 +42,7 @@
 
 ---
 
-## Part 1: MLflow repo structure
+## Part 1: MLflow set up with Docker and repo overview
 
 ### What it is
 
@@ -96,9 +95,11 @@ Plus a one-shot `create-bucket` container (AWS CLI) that creates the S3 bucket o
 
 ---
 
-## Part 2: Key MLflow concepts
+## Part 2: ML models
 
-### Tracking
+### Key MLflow concepts
+
+#### Tracking
 
 The core workflow: log everything about a model training run so you can compare and reproduce.
 
@@ -115,7 +116,7 @@ with mlflow.start_run():
 - **Run** -- one execution of training code (has params, metrics, artifacts, tags)
 - **Artifact** -- any file: model pickle, plot PNG, CSV, etc.
 
-### Autolog
+#### Autolog
 
 One line replaces all the manual `log_param`/`log_metric` calls:
 
@@ -126,7 +127,7 @@ model.fit(X_train, y_train)  # MLflow intercepts this and logs everything
 
 Logs: hyperparameters, training metrics, model signature, even feature importance plots.
 
-### Model Registry
+#### Model Registry
 
 Version and stage-manage models:
 - Log a model during a run
@@ -134,7 +135,7 @@ Version and stage-manage models:
 - Promote versions through stages (None -> Staging -> Production)
 - Query by stage for deployment
 
-### Model serving
+#### Model serving
 
 ```bash
 mlflow models serve -m "models:/StravaRacePredictor/Production" --port 5001
@@ -142,11 +143,9 @@ mlflow models serve -m "models:/StravaRacePredictor/Production" --port 5001
 
 Spins up a REST API that accepts JSON input and returns predictions.
 
----
+### Strava running model brainstorm
 
-## Part 3: Strava running model brainstorm
-
-### Data available from Strava
+#### Data available from Strava
 
 Strava bulk export gives a CSV of all activities with:
 - Distance, duration, elevation gain
@@ -155,7 +154,7 @@ Strava bulk export gives a CSV of all activities with:
 - Date, time, weather (maybe via external API)
 - Training load / relative effort (if available)
 
-### Model ideas
+#### Model ideas
 
 1. **Realtime pace predictor**
    - Features: shoes, elevation, humidity
@@ -172,10 +171,16 @@ Strava bulk export gives a CSV of all activities with:
    - Then correlate clusters with race performance
    - Why: shows breadth (clustering + analysis), less prediction-focused
 
-### Models to try
+#### Models to try
 
-- **ElasticNet** — linear baseline, fast, interpretable, good for comparison. Done but predicts only 40% of variance.
+- **ElasticNet** — linear baseline, fast, interpretable, good for comparison. Done but predicts only 40% of variance
 - **XGBoost** — gradient-boosted trees, typically best for tabular data, handles non-linear relationships and feature interactions without manual engineering
+
+---
+
+## Part 3: GenAI — Data Science AI Agent with Qwen 3.5
+
+*TODO: add content from Google Doc*
 
 ---
 
@@ -225,7 +230,7 @@ Strava bulk export gives a CSV of all activities with:
 
 ### Confounding & omitted variable bias
 
-**Humidity showed up as a top predictor of pace — but it's a confounder, not a cause.** The Napa Valley Marathon was early morning (cool, humid) with race shoes and full taper. Daily Mill Valley training runs are late morning (dry, warm) at easy effort. The model sees high humidity → fast pace and learns a positive coefficient, but the true causal structure is `race_day → {humidity, shoes, effort, taper} → speed`. Without an `is_race` feature, the model distributes that effect across correlated proxies.
+**Humidity showed up as a top predictor of pace — but it's a confounder, not a cause.** The Napa Valley Marathon was early morning (cool, humid) with race shoes and full taper. Daily San Francisco training runs are late morning (dry, warm) at easy effort. The model sees high humidity → fast pace and learns a positive coefficient, but the true causal structure is `race_day → {humidity, shoes, effort, taper} → speed`. Without an `is_race` feature, the model distributes that effect across correlated proxies.
 
 **Lasso vs Ridge expose confounding differently.** Pure Lasso (l1=1.0) made humidity the #1 feature — when forced to pick few features, it chose the single best proxy for "race day." Pure Ridge (l1=0.0) spread the signal across shoes, power, and humidity, dropping humidity to #8. This is because Ridge keeps all features and distributes weight, while Lasso concentrates on the most efficient proxies.
 
