@@ -278,3 +278,9 @@ Take another pass at `open_issues.md`, find a good-first-issue, and submit a PR.
 ### Bonus: MCMC Bayesian analysis (lower priority)
 
 Reimplement the Bayesian A/B test using MCMC sampling (PyMC or Stan) instead of the closed-form conjugate update. Same data, same question, but let the sampler find the posterior numerically. Goal: understand when MCMC is necessary vs. overkill, and see firsthand that it converges to the same answer as the closed-form solution for this simple case.
+
+---
+
+## Learning references
+
+- "Trustworthy Online Controlled Experiments" by Ron Kohavi

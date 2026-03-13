@@ -10,7 +10,9 @@ mlflow/
 │   └── mlflow_architecture.svg      # System design: tracking server, artifact store, model registry
 ├── strava_scripts/
 │   ├── feature_engineering.py       # FIT file parsing, CSV merging, rolling/lagged feature engineering
-│   ├── train_classical_ml.py        # ElasticNet training with MLflow experiment tracking
+│   ├── train_elasticnet.py          # ElasticNet training
+│   ├── train_gbrt.py                # Gradient Boosted Regression Trees training
+│   ├── train_xgboost.py             # XGBoost training
 │   └── mini_script.py               # Exploratory FIT file parser
 ├── docker-compose/
 │   ├── docker-compose.yml           # PostgreSQL + RustFS + MLflow server stack
@@ -36,15 +38,18 @@ Per-second running pace prediction using personal Strava data, tracked as MLflow
 - **Data pipeline**: batch-parse Garmin FIT files (binary telemetry) and join with Strava CSV activity metadata via file ID bridge key
 - **Target**: instantaneous speed (m/s) at each second of a run
 - **Features**: elevation change (30s window), heart rate, elapsed time, % complete, shoe type (one-hot encoded), weather, `is_race` confounder control
-- **Models**: ElasticNet as interpretable baseline (R² ≈ 0.40), XGBoost planned for non-linear interactions (R² target: 0.80+)
+- **Models**: ElasticNet as interpretable baseline (R² = 0.44), XGBoost reaches the best performance by capturing non-linear interactions (R² = 0.71)
 - **MLflow integration**: params, metrics (RMSE, R²), model artifact, and feature importance / residual plots logged per run
 
 ### Key findings
+
+![Strava Models Comparison](system_design/mlflow_strava_model_comp.png)
 
 - **Elevation change** is the strongest predictor of instantaneous pace
 - **Shoe type** has a measurable effect: carbon race shoes (METASPEED SKY) → faster, heavy trainers (GEL-NIMBUS 28) → slower
 - **Humidity** appeared as a strong predictor but is a **confounder** — it proxies for race-day conditions (early morning, cool, tapered, race shoes). Adding `is_race` as a feature controls for this omitted variable bias
 - **Calories and power** were identified as target leakage (both derived from speed) and removed
+- **Models**: XGBoost performed the best with an R² of 0.71, followed by GBRT at 0.67 and finally ElasticNet at 0.44
 
 ## Key Design Decisions
 
@@ -53,7 +58,7 @@ Per-second running pace prediction using personal Strava data, tracked as MLflow
 | Local MLflow tracking server | No infra cost, reproducible across machines |
 | Strava as training data | Real personal data, meaningful features, avoids synthetic data |
 | Per-second granularity | Richer signal than activity-level aggregates, captures intra-run dynamics |
-| ElasticNet first, then XGBoost | Linear baseline surfaces interpretable insights (shoe effects, confounders); tree model captures non-linear interactions |
+| ElasticNet, GBRT & XGBoost | Linear baseline surfaces interpretable insights (shoe effects, confounders); tree model captures non-linear interactions |
 
 ## Requirements
 
@@ -64,6 +69,7 @@ pandas
 scikit-learn
 matplotlib
 fitparse
+xgboost
 ```
 
 ## Running the Project
@@ -72,11 +78,17 @@ fitparse
 # Start the Docker stack (PostgreSQL + RustFS + MLflow server)
 cd docker-compose && docker compose up -d
 
-# Train with default hyperparameters
-python strava_scripts/train_classical_ml.py
+# Train ElasticNet with default hyperparameters
+python strava_scripts/train_elasticnet.py
 
-# Train with custom hyperparameters
-python strava_scripts/train_classical_ml.py --alpha 0.05 --l1-ratio 1.0 --limit 20
+# Train ElasticNet with custom hyperparameters
+python strava_scripts/train_elasticnet.py --alpha 0.05 --l1-ratio 1.0 --limit 20
+
+# Train GBRT
+python strava_scripts/train_gbrt.py --limit 75
+
+# Train XGBoost
+python strava_scripts/train_xgboost.py --limit 75
 
 # Open MLflow UI to compare runs
 open http://localhost:5000

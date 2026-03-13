@@ -24,7 +24,7 @@
 - [x] EDA in pandas
 - [x] Train a linear model (e.g., predict pace from training features)
 - [x] Track experiments in MLflow (params, metrics, artifacts)
-- [ ] Train an advanced model to get high predictability (e.g. XGBoost)
+- [x] Train an advanced model to get high predictability (e.g. XGBoost)
 - [ ] Register best model in Model Registry
 - [ ] Serve model locally via `mlflow models serve`
 
@@ -173,8 +173,9 @@ Strava bulk export gives a CSV of all activities with:
 
 #### Models to try
 
-- **ElasticNet** — linear baseline, fast, interpretable, good for comparison. Done but predicts only 40% of variance
-- **XGBoost** — gradient-boosted trees, typically best for tabular data, handles non-linear relationships and feature interactions without manual engineering
+- **ElasticNet** -- linear baseline, fast, interpretable, good for comparison. R2 ~ 0.44, RMSE ~ 0.48 on 75 runs
+- **GBRT** -- sklearn gradient-boosted trees, no regularization on leaf weights. R2 ~ 0.67, RMSE ~ 0.36 on 75 runs
+- **XGBoost** -- gradient-boosted trees with L1/L2 regularization and early stopping. R2 ~ 0.71, RMSE ~ 0.34 on 75 runs (best)
 
 ---
 
@@ -244,6 +245,12 @@ Strava bulk export gives a CSV of all activities with:
 
 **ElasticNet topped out at R² ≈ 0.40 on 100 runs.** With 10 runs (similar fitness, same routes), R² was ~0.77, but scaling to 100 runs spanning months of different fitness levels, terrains, and conditions exposed ElasticNet's limits. The problem is inherently non-linear: pace depends on *interactions* (elevation × fatigue, shoe × distance, HR × pct_complete) that a linear model can't capture.
 
-**This is where XGBoost comes in.** Gradient-boosted trees handle interactions and non-linearities natively — each tree can split on elevation first, then split differently depending on fatigue level, without needing explicit interaction terms. Expected jump: R² from 0.40 → 0.80+.
+**GBRT and XGBoost both capture non-linear interactions natively.** Each tree can split on elevation first, then split differently depending on fatigue level, without needing explicit interaction terms. On 75 runs: XGBoost hit R2 = 0.71 (RMSE 0.34), GBRT hit R2 = 0.67 (RMSE 0.36), ElasticNet hit R2 = 0.44 (RMSE 0.48). XGBoost's L2 regularization and early stopping gave it the edge over vanilla GBRT.
 
 **The progression matters more than the final number.** Starting with ElasticNet gave us interpretable coefficients that surfaced the shoe effect, the humidity confounder, and the power leakage issue. None of those insights come from a tree model's feature importances. The right workflow is: interpretable baseline first (understand the data), then powerful model second (optimize predictions), tracked and compared in MLflow.
+
+---
+
+## Learning references
+
+- "Hands-On Machine Learning" by Aurelien Geron

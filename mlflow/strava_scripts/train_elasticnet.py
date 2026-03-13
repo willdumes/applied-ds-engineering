@@ -37,7 +37,7 @@ def train_and_log(df, alpha, l1_ratio):
     coefs = pd.Series(model.coef_, index=X.columns)
 
     # Log to MLflow
-    mlflow.log_params({'alpha': alpha, 'l1_ratio': l1_ratio, 'n_features': X.shape[1]})
+    mlflow.log_params({'model_type': 'elasticnet', 'alpha': alpha, 'l1_ratio': l1_ratio, 'n_features': X.shape[1]})
     mlflow.log_metrics({'rmse': rmse, 'r2': r2, 'features_zeroed_by_l1': int((coefs.abs() < 1e-8).sum())})
     mlflow.sklearn.log_model(model, name='elasticnet_pace_model')
 

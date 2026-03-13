@@ -7,18 +7,6 @@ ACTIVITIES_DIR = '/Users/willd/Development/applied-ds-engineering/mlflow/strava_
 CSV_PATH = '/Users/willd/Development/applied-ds-engineering/mlflow/strava_data/activities.csv'
 
 
-def extract_records_from_fit_file(file_path, activity_id):
-    f = FitFile(file_path)
-    def record_to_dict(message):
-        return {field.name: field.value for field in message.fields}
-
-    records = [record_to_dict(r) for r in f.get_messages('record')]
-    rec_df = pd.DataFrame(records)
-    rec_df['Activity ID'] = int(activity_id)
-
-    return rec_df
-
-
 def extract_all_fit_records(activities_dir, limit=None):
     """Loop through .fit and .fit.gz files, parse records, return combined DataFrame.
     If limit is set, only parse the N most recent files (highest numeric ID = most recent).
@@ -124,6 +112,7 @@ def prepare_model_input(df):
         'Activity ID', 'file_id', 'Activity Date', 'Activity Name',
         'Activity Type', 'Filename', 'timestamp', 'enhanced_speed',
         'position_lat', 'position_long', 'gps_accuracy',
+        'Distance', 'Elapsed Time', 'Moving Time',
     ]
     df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
