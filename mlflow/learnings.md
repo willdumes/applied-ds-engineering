@@ -30,10 +30,11 @@
 
 ### Phase 3: GenAI (Data Science AI Agent with Qwen 3.5)
 
-- [ ] Set up MLflow tracing with local Qwen3.5 via Ollama
-- [ ] Log and inspect LLM traces in the MLflow UI
+- [x] Set up MLflow tracing with local Qwen3.5 via Ollama
+- [x] Log and inspect LLM traces in the MLflow UI
 - [ ] Use MLflow Evaluate to score LLM outputs (relevance, toxicity, etc.)
 - [ ] (bonus) Build a Data Science AI agent
+- [ ] (bonus) Build a RAG system: embed Strava run summaries with `embeddings.create()`, retrieve relevant context per question, pass to `chat.completions.create()`
 
 ### Phase 4: Go deeper
 
@@ -179,9 +180,109 @@ Strava bulk export gives a CSV of all activities with:
 
 ---
 
-## Part 3: GenAI — Data Science AI Agent with Qwen 3.5
+## Part 3: GenAI — LLM Tracing & Evaluation with Qwen 3.5
 
-*TODO: add content from Google Doc*
+### LLM chat API fundamentals
+
+Every major LLM provider (OpenAI, Anthropic, Ollama) uses the same core abstraction: you send a list of **messages**, each tagged with a **role**, and the model returns a completion.
+
+#### The four roles
+
+| Role | Purpose | Example |
+|------|---------|---------|
+| `system` | Standing instructions sent with every API call. Sets behavior, persona, constraints. Not persisted by the model. | "You are a running coach. Keep responses under 200 words." |
+| `user` | The person (or application) sending input to the model. | "What pace should I target for a half marathon?" |
+| `assistant` | The model's own prior responses, replayed to give conversational context. | The model's answer from the previous turn. |
+| `tool` | Results returned from tool/function calls the model requested. | `{"temp": 18, "condition": "sunny"}` after the model asked to call `get_weather`. |
+
+A multi-turn conversation replays the full history each time:
+
+```python
+messages = [
+    {'role': 'system', 'content': 'You are a running coach.'},
+    {'role': 'user', 'content': 'What pace should I target?'},
+    {'role': 'assistant', 'content': 'Based on your recent training...'},
+    {'role': 'user', 'content': 'What about for a half marathon?'},
+]
+```
+
+#### Tool calling flow
+
+The model never executes tools directly. It outputs structured JSON requesting a call, your code runs the function, and you pass the result back as a `tool` message:
+
+1. **User asks**: "What's the weather in Paris?"
+2. **Assistant responds** with `tool_calls`: `[{"function": {"name": "get_weather", "arguments": "{\"city\": \"Paris\"}"}}]`
+3. **Your code** runs `get_weather("Paris")` and gets `{"temp": 18, "condition": "sunny"}`
+4. **Tool message** sends the result back: `{'role': 'tool', 'content': '{"temp": 18, "condition": "sunny"}'}`
+5. **Assistant** uses that result to write: "It's 18C and sunny in Paris."
+
+This is how Claude Code, ChatGPT plugins, and any LLM-with-tools system works under the hood.
+
+### Python SDKs for LLM APIs
+
+Three packages for three providers, each with a different calling convention:
+
+```python
+# Ollama (local models, no API key, simplest API)
+import ollama
+response = ollama.chat('qwen3.5:35b', messages=[...])
+answer = response['message']['content']
+
+# OpenAI (needs OPENAI_API_KEY)
+from openai import OpenAI
+client = OpenAI()
+response = client.chat.completions.create(model='gpt-4.1-mini', messages=[...])
+answer = response.choices[0].message.content
+
+# Anthropic (needs ANTHROPIC_API_KEY)
+from anthropic import Anthropic
+client = Anthropic()
+response = client.messages.create(model='claude-sonnet-4-6', system='...', messages=[...])
+answer = response.content[0].text
+```
+
+Key differences:
+- **Ollama**: module-level functions (no client object), dict-style access (`response['message']`), system prompt goes in the messages list, model names use colons for size tags (`qwen3.5:35b`)
+- **OpenAI**: client object, attribute access (`response.choices[0].message.content`), system prompt in messages list
+- **Anthropic**: client object, attribute access, system prompt is a separate `system` parameter (not in messages)
+
+Ollama can also be accessed via the OpenAI SDK by pointing at its OpenAI-compatible endpoint (`base_url="http://localhost:11434/v1"`). This is useful when you need MLflow's `openai.autolog()` integration.
+
+### Ollama response structure
+
+The full response from `ollama.chat()` contains more than just the answer:
+
+| Field | Example | Meaning |
+|-------|---------|---------|
+| `model` | `'qwen3.5:35b'` | Which model ran |
+| `done_reason` | `'stop'` | Stopped naturally vs. hit token limit |
+| `total_duration` | `64475316917` (ns) | Total wall time (~64.5s) |
+| `load_duration` | `9676765125` (ns) | Time loading model into GPU memory (~9.7s) |
+| `prompt_eval_count` | `11` | Input tokens processed |
+| `eval_count` | `1487` | Output tokens generated |
+| `message.content` | `'Hello! How can I help?'` | The actual response |
+| `message.thinking` | `'Thinking Process: ...'` | Chain-of-thought reasoning (Qwen3.5 has this on by default) |
+
+### MLflow tracing for LLMs
+
+MLflow offers two approaches for logging LLM calls:
+
+1. **Autolog** (SDK-specific): `mlflow.openai.autolog()` or `mlflow.anthropic.autolog()` automatically traces every call through that SDK. No code changes needed. There is no `mlflow.ollama.autolog()`.
+
+2. **Manual tracing**: `@mlflow.trace` decorator on any function. Works with any SDK, including Ollama. You control exactly what gets traced.
+
+For local models via Ollama, `@mlflow.trace` is the way to go. If you want automatic tracing, route through the OpenAI SDK pointed at Ollama's compatible endpoint.
+
+### MLflow's built-in LLM judges
+
+MLflow provides pre-built LLM judges for evaluating model outputs. The **Correctness** judge (`mlflow.genai.judges.is_correct`) checks whether expected facts are supported by the response:
+
+- **Prompt template**: `mlflow/genai/judges/prompts/correctness.py` defines the evaluation instructions
+- **Judge function**: `is_correct(request, response, expected_facts)` returns a `Feedback` object with `"yes"` or `"no"`
+- **Default model**: `gpt-4.1-mini` (non-Databricks) or Databricks' proprietary judge (Databricks environments)
+- **Scorer wrapper**: `mlflow.genai.scorers.Correctness` wraps the judge for batch evaluation with `mlflow.evaluate()`
+
+The judge checks if facts are **supported by** the response, not strict equivalence. The response can contain extra information and still be correct.
 
 ---
 
@@ -240,6 +341,12 @@ Strava bulk export gives a CSV of all activities with:
 ### Target leakage
 
 **Calories and power are downstream of speed, not causes of it.** Strava computes calories from speed, distance, and HR after the run. Running power (from the watch) is derived from speed + grade + weight in real time. Both are formula transformations of the target variable — including them inflates R² but doesn't add predictive value on genuinely unseen data. Removing them gives cleaner, more interpretable coefficients.
+
+### LLM context windows and prompt caching
+
+**LLMs are stateless.** The illusion of memory comes from replaying the full message history with every API call. As conversations grow, the message list grows linearly. Eventually it hits the model's **context window** (max tokens it can process at once). Management strategies: truncation (drop oldest messages), summarization (compress older turns into a summary), or a sliding window (keep only the last N turns).
+
+**Prompt caching reduces cost without reducing context.** Providers (Anthropic, OpenAI) cache the repeated prefix of your messages. If turns 1-50 are identical to the last call and you only added turn 51, the cached prefix isn't reprocessed from scratch. Anthropic charges cached input tokens at ~10% of fresh input tokens. The model still "sees" everything, but compute cost and latency are reduced. Same idea as a database query cache: the full table scan only happens once.
 
 ### From linear baseline to XGBoost
 
