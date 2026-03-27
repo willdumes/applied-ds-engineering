@@ -209,3 +209,5 @@ CLAUDE.md
 .claude/
 strava_data/
 open_issues.md
+practice_*.py
+causal_impact/dowhy/

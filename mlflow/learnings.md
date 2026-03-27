@@ -364,8 +364,28 @@ The judge checks if facts are **supported by** the response, not strict equivale
 
 **The progression matters more than the final number.** Starting with ElasticNet gave us interpretable coefficients that surfaced the shoe effect, the humidity confounder, and the power leakage issue. None of those insights come from a tree model's feature importances. The right workflow is: interpretable baseline first (understand the data), then powerful model second (optimize predictions), tracked and compared in MLflow.
 
+### Transformer architecture
+
+**A decoder-only transformer is just repeated blocks of attention + MLP.** Qwen 3.5 (35B) has 64 identical layers, each with the same two-step pattern: self-attention (tokens communicate with each other) then MLP (each token processes independently). Plus an embedding table at the input and a projection head at the output. That's the entire architecture.
+
+**Self-attention is the "where to look" mechanism.** Each token's embedding gets projected into three vectors: Query Q ("what am I looking for?"), Key K ("what do I contain?"), and Value V ("here's my content"). Attention scores = softmax(QKᵀ / √d_k) — the dot product of Q and K determines how much each token attends to every other token, scaled by √d_k to prevent saturation. The output is a weighted sum of V vectors. In decoder-only models, attention is masked so token N can only see tokens 1 through N.
+
+**MLP is the "think about it" step.** After attention gathers context, the MLP (Multi-Layer Perceptron) applies non-linear transformations independently per token. Modern models like Qwen use SwiGLU, which has three projections (gate, up, down) instead of two. The MLP holds ~65% of the model's parameters because d_ff (feed-forward dimension) is ~2.7× larger than d_model.
+
+**Parameter distribution in a 35B model.** Not evenly spread: ~65% in MLP layers, ~25% in attention layers, ~10% in embedding tables. Per layer: MLP ≈ 350M params, attention ≈ 140M params, layer norms ≈ negligible. 64 layers × ~500M + ~3B embeddings ≈ 35B total.
+
+**Multi-head attention splits the work.** Instead of one large attention computation, the model runs multiple smaller ones in parallel (e.g., 12 heads × 64 dimensions each = 768 total for GPT-2). Each head can learn to attend to different patterns — one head might focus on syntax, another on semantics. The standard notation: h = number of heads, d_k = dimension per head, d_model = h × d_k.
+
+**Softmax converts logits to probabilities.** softmax(zᵢ) = eᶻⁱ / Σⱼ eᶻʲ. Takes a vector of raw scores and normalizes them to sum to 1. Used in two places: (1) attention weights (how much to look at each token), and (2) the final output layer (probability of each token in the vocabulary). The same function appears in logistic regression — sigmoid is softmax for 2 classes.
+
+**Open weights = architecture + learned parameters.** A model like Qwen on Hugging Face ships as: `config.json` (the architecture blueprint: layer count, d_model, n_heads, vocab_size), `.safetensors` files (the trained weight matrices, split into ~5GB shards), and `merges.txt` (BPE tokenizer rules). The `transformers` library reads the config to build the empty network, then loads the weights.
+
+**Encoder-decoder vs decoder-only.** The original Transformer (Vaswani et al., 2017) had two sides: an encoder (bidirectional attention over the source) and a decoder (causal attention over the target). The encoder "understands" the full input; the decoder generates output token by token, cross-attending to the encoder. Every frontier LLM since GPT-3 is decoder-only — a sufficiently large decoder learns to understand and generate in a single left-to-right pass, making the encoder unnecessary.
+
 ---
 
 ## Learning references
 
 - "Hands-On Machine Learning" by Aurelien Geron
+- "Attention Is All You Need" (Vaswani et al., 2017) — original Transformer paper
+- Andrej Karpathy "Let's Build GPT" and "Make More" YouTube series
