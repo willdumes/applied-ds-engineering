@@ -3,8 +3,12 @@ import gzip
 import os
 import pandas as pd
 
-ACTIVITIES_DIR = '/Users/willd/Development/applied-ds-engineering/mlflow/strava_data/activities'
-CSV_PATH = '/Users/willd/Development/applied-ds-engineering/mlflow/strava_data/activities.csv'
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_DEFAULT_DIR = os.path.normpath(os.path.join(_HERE, '..', 'strava_data', 'activities'))
+_DEFAULT_CSV = os.path.normpath(os.path.join(_HERE, '..', 'strava_data', 'activities.csv'))
+
+ACTIVITIES_DIR = os.environ.get('STRAVA_ACTIVITIES_DIR', _DEFAULT_DIR)
+CSV_PATH = os.environ.get('STRAVA_CSV_PATH', _DEFAULT_CSV)
 
 
 def extract_all_fit_records(activities_dir, limit=None):
