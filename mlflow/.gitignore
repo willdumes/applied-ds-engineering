@@ -1,2 +1,6 @@
 strava_data/
+tx_scripts/data/raw/*
+!tx_scripts/data/raw/.gitkeep
+tx_scripts/data/processed/*
+!tx_scripts/data/processed/.gitkeep
 *.png

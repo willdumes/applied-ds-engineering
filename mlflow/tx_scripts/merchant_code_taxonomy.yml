@@ -1,0 +1,71 @@
+# Custom merchant-code taxonomy for Plaid transaction classification.
+#
+# These labels are intentionally business-oriented rather than exact card-network
+# MCCs. Plaid category fields can be used as weak labels for bootstrapping.
+
+FOOD_DINING:
+  description: Restaurants, coffee shops, bars, groceries, and food delivery.
+  plaid_primary:
+    - FOOD_AND_DRINK
+  plaid_detailed: []
+
+TRANSPORTATION:
+  description: Public transit, rideshare, fuel, parking, and travel movement.
+  plaid_primary:
+    - TRANSPORTATION
+  plaid_detailed: []
+
+RENT_UTILITIES:
+  description: Rent, utilities, telecom, internet, and household bills.
+  plaid_primary:
+    - RENT_AND_UTILITIES
+  plaid_detailed: []
+
+SHOPPING:
+  description: Retail purchases, ecommerce, clothing, and general merchandise.
+  plaid_primary:
+    - GENERAL_MERCHANDISE
+  plaid_detailed: []
+
+HEALTHCARE:
+  description: Medical care, pharmacies, dentists, vision, and insurance-related health spend.
+  plaid_primary:
+    - MEDICAL
+  plaid_detailed: []
+
+ENTERTAINMENT:
+  description: Recreation, subscriptions, events, streaming, and hobbies.
+  plaid_primary:
+    - ENTERTAINMENT
+  plaid_detailed: []
+
+BUSINESS_SERVICES:
+  description: Software, professional services, cloud tools, office expenses, and B2B vendors.
+  plaid_primary:
+    - GENERAL_SERVICES
+  plaid_detailed: []
+
+FINANCIAL_SERVICES:
+  description: Loans, fees, interest, credit card payments, investments, and financial institutions.
+  plaid_primary:
+    - LOAN_PAYMENTS
+    - BANK_FEES
+  plaid_detailed: []
+
+INCOME_PAYROLL:
+  description: Payroll, benefits, interest income, refunds, and other inbound funds.
+  plaid_primary:
+    - INCOME
+  plaid_detailed: []
+
+TRANSFER:
+  description: Account transfers, peer-to-peer payments, and internal money movement.
+  plaid_primary:
+    - TRANSFER_IN
+    - TRANSFER_OUT
+  plaid_detailed: []
+
+OTHER:
+  description: Fallback label for low-confidence or unmapped transactions.
+  plaid_primary: []
+  plaid_detailed: []

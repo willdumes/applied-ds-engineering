@@ -267,9 +267,9 @@ Relevant use cases in experimentation platforms:
 
 ## Part 5: Up Next
 
-### Deep dive into GrowthBook's 3 statistic types
+### ~~Deep dive into GrowthBook's 3 statistic types~~ ✓
 
-Understand how proportions, means, and ratios each flow through the stats engine differently. Focus on `ProportionStatistic`, `SampleMeanStatistic`, and `RatioStatistic` in `models/statistics.py` — how variance is computed, how the delta method adapts for ratios, and when each type applies.
+Covered via `practice_distributions.py` exercises (Normal, Poisson, Binomial, Exponential distributions with fitted curves, bootstrapping, permutation tests, CLT convergence).
 
 ### Contribute to GrowthBook — fix an open issue
 

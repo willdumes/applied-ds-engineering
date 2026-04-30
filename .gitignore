@@ -207,7 +207,9 @@ marimo/_lsp/
 __marimo__/
 CLAUDE.md
 .claude/
+.private/
 strava_data/
 open_issues.md
 practice_*.py
 causal_impact/dowhy/
+*.png
