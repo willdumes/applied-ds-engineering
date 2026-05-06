@@ -384,6 +384,51 @@ The judge checks if facts are **supported by** the response, not strict equivale
 
 **Encoder-decoder vs decoder-only.** The original Transformer (Vaswani et al., 2017) had two sides: an encoder (bidirectional attention over the source) and a decoder (causal attention over the target). The encoder "understands" the full input; the decoder generates output token by token, cross-attending to the encoder. Every frontier LLM since GPT-3 is decoder-only — a sufficiently large decoder learns to understand and generate in a single left-to-right pass, making the encoder unnecessary.
 
+### Apache Iceberg table format
+
+**Iceberg is a table format, not a storage engine.** Files (Parquet, ORC, Avro) sit in object storage; Iceberg adds a metadata layer that tracks which files belong to the table at each point in time. The metadata is what gives you ACID transactions, schema evolution, and time travel on top of plain file storage. Pluggable engines (Spark, Trino, DuckDB, PyIceberg) all read the same metadata.
+
+**Snapshots are first-class.** Every write produces a new snapshot with a stable `snapshot_id`. Old snapshots remain queryable until expiration (a separate maintenance op). This is the killer feature for ML reproducibility: log the snapshot_id alongside model params and you can replay the *exact bytes* the run trained on, even after the source data has been regenerated. Without Iceberg, "reproducibility" usually means rerunning ETL and hoping for the same output.
+
+**Catalog vs warehouse.** The catalog stores table metadata (where the files are, schema, snapshot history). The warehouse stores the data files themselves. Locally a SQLite catalog + filesystem warehouse is enough for a portfolio project; in production the catalog is Glue / Polaris / Nessie and the warehouse is S3. The same PyIceberg code works for both — you just swap the catalog config.
+
+**Why this matters for ML.** Pinning a training run to specific snapshots converts a fragile "trust the data team" handoff into a `snapshot_id` integer logged in MLflow. Teammates can reproduce your numbers, you can debug a regression by diffing two snapshots, and a stale model serving in production can be traced back to the exact training set it learned on.
+
+### Learning to rank
+
+**Ranking ≠ classification.** A classifier predicts P(label) per row. A ranker scores rows so that the *order within a group* is right. Same input, same output (a score per row), different objective. For top-K problems (search, recommendations, feed ranking) the absolute probability does not matter, only the order, so spending model capacity on order pays off.
+
+**Pairwise objective (XGBoost's `rank:pairwise`).** For each ranking group (e.g., one user-day session), enumerate pairs (i, j) where item i was preferred over item j. Loss is logistic on the score margin: `L_ij = log(1 + exp(-(f(x_i) - f(x_j))))`. Gradient pushes the higher-relevance item up and the lower one down. Each row's total gradient sums contributions across all pairs it participates in *within its group*. The `group=` argument tells XGBoost which rows belong together; without it, the loss is meaningless.
+
+**LambdaRank refinement.** Plain pairwise treats every misordered pair equally. LambdaRank multiplies the pair gradient by `|delta NDCG|` (the change in NDCG you would get by swapping the two items), so the model spends gradient on the head of the list, which is what users actually see. Setting `eval_metric='ndcg@10'` in XGBoost approximates this.
+
+**NDCG@K (the standard ranking metric).** Per group: rank items by score, give a relevant item at position r a gain of `1 / log2(r+1)` (position 1 = 1.0, position 10 = 0.29). Sum the gains for the top K = DCG. Divide by ideal DCG (what you would get sorting by true labels) so the score lives in [0, 1]. Average across groups. The log discount mirrors how attention drops off as users scan a list.
+
+**Precision@K is simpler but blind to position.** Top-3 precision treats rank 1 and rank 3 the same, so precision@3 ≈ precision@5 means the model is not differentiating within its top picks. NDCG would catch that. Use precision@K for stakeholders, NDCG@K for tuning.
+
+### Selection bias and off-policy learning
+
+**Training only sees what was logged, but production scores everything.** If a recommender historically only logged interactions on the 10 items shown, the trained model has never seen the other 590. Tree models do not extrapolate gracefully, so scores on never-shown items can be confidently wrong. This gap between the policy that *generated* the data and the policy you want to *deploy* is the off-policy problem.
+
+**Three families of fixes.**
+
+1. **Implicit negatives via sampling.** For each session, keep the shown rows and append K randomly sampled unshown items labeled 0. Standard in BPR-style recsys. Fast and simple, with a known bias: it teaches the model that "looks unshown" correlates with "not completed", which is a soft form of learning the old policy. Acceptable for v1.
+
+2. **Inverse Propensity Scoring (IPS).** Do not invent labels. Instead, reweight each shown row by `1 / P(it was shown)`. Mathematically debiased: in expectation, the loss is the same as if every item had been shown uniformly. Variance explodes when propensities are tiny, so the practical fix is *clipped IPS* (cap weights at some max). Needs a model of `P(shown)`, which often has to be estimated from the same logs.
+
+3. **Two-stage architecture.** Separate retrieval (cheap, recalls ~100 candidates from the catalog) from ranking (expensive, refines those 100 down to K). Retrieval trains on a different signal entirely (co-occurrence, embeddings, content similarity), so the ranker never has to score items it has never seen. This is what large-scale recsys teams build.
+
+**Filter, diversify, explore.** Even with the right loss and the right architecture, a top-K policy needs three production-time guardrails:
+- **Filter**: exclude items the user already saw recently (avoid repeats).
+- **Diversify**: cap items per category so the top K is not 10 near-duplicates.
+- **Explore**: reserve 1 to 2 slots per session for non-greedy picks. Without exploration, the model only ever gets feedback on its own choices, so the long tail of items stays uncertain forever and the recommender entrenches its biases. Exploration slots also give an unbiased counterfactual for A/B analysis.
+
+### Baseline plus challenger pattern
+
+**A single model number is meaningless without a baseline.** "NDCG@10 = 0.80" reads as good or bad depending on whether logistic regression on the same data gets 0.79 or 0.55. Standard practice: train the simplest plausible model first (logistic, mean predictor, popularity) on the *same features* and the *same eval split*, log it as a separate MLflow run, then compare. The baseline's job is to be the floor that justifies the more complex model's existence.
+
+**Apples-to-apples eval across model types.** A pointwise classifier outputs P(complete); a pairwise ranker outputs a relative score. To compare them fairly, evaluate both as rankers: sort predictions within each group, compute NDCG@K on both. This is why `feature_engineering.py` returns `group_test` and the eval helpers (`ndcg_at_k`, `precision_at_k`) take group sizes — both training scripts call the same metric on the same partition.
+
 ---
 
 ## Learning references

@@ -213,3 +213,6 @@ open_issues.md
 practice_*.py
 causal_impact/dowhy/
 *.png
+
+# Iceberg local catalog + warehouse from generated synthetic data
+mlflow/tempo_ex_ranking/warehouse/
