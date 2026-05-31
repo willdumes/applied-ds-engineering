@@ -8,7 +8,7 @@ A portfolio project demonstrating end-to-end ML experiment tracking and model ma
 mlflow/
 ├── system_design/
 │   └── mlflow_architecture.svg      # System design: tracking server, artifact store, model registry
-├── strava_scripts/
+├── strava_pace_prediction/
 │   ├── feature_engineering.py       # FIT file parsing, CSV merging, rolling/lagged feature engineering
 │   ├── train_elasticnet.py          # ElasticNet training
 │   ├── train_gbrt.py                # Gradient Boosted Regression Trees training
@@ -31,7 +31,7 @@ mlflow/
 - **Model registry**: staging, production, and archived model versions with lineage
 - **Serving layer**: MLflow model server, REST API, batch vs. real-time inference patterns
 
-## Strava Pace Prediction (`strava_scripts/`)
+## Strava Pace Prediction (`strava_pace_prediction/`)
 
 Per-second running pace prediction using personal Strava data, tracked as MLflow experiments.
 
@@ -79,16 +79,16 @@ xgboost
 cd docker-compose && docker compose up -d
 
 # Train ElasticNet with default hyperparameters
-python strava_scripts/train_elasticnet.py
+python strava_pace_prediction/train_elasticnet.py
 
 # Train ElasticNet with custom hyperparameters
-python strava_scripts/train_elasticnet.py --alpha 0.05 --l1-ratio 1.0 --limit 20
+python strava_pace_prediction/train_elasticnet.py --alpha 0.05 --l1-ratio 1.0 --limit 20
 
 # Train GBRT
-python strava_scripts/train_gbrt.py --limit 75
+python strava_pace_prediction/train_gbrt.py --limit 75
 
 # Train XGBoost
-python strava_scripts/train_xgboost.py --limit 75
+python strava_pace_prediction/train_xgboost.py --limit 75
 
 # Open MLflow UI to compare runs
 open http://localhost:5000
