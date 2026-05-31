@@ -216,3 +216,11 @@ causal_impact/dowhy/
 
 # Iceberg local catalog + warehouse from generated synthetic data
 mlflow/tempo_ex_ranking/warehouse/
+mantle_onsite/
+
+# MLflow artifact store (binary run artifacts, regenerated on training)
+mlartifacts/
+
+# Kaggle fraud dataset (download from Kaggle, ~480MB) + local MLflow store
+mlflow/kaggle_fraud_classifier/data/
+mlflow/kaggle_fraud_classifier/mlflow.db
